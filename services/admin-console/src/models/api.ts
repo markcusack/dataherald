@@ -280,6 +280,7 @@ export enum EDatabaseDialect {
   duckdb = 'duckdb',
   bigquery = 'bigquery',
   sqlite = 'sqlite',
+  yellowbrick = 'yellowbrick',
 }
 
 export type DatabaseDialect = keyof typeof EDatabaseDialect
@@ -289,6 +290,7 @@ export const SCHEMA_SUPPORTED_DIALECTS: Set<DatabaseDialect> = new Set([
   EDatabaseDialect.snowflake,
   EDatabaseDialect.databricks,
   EDatabaseDialect.postgresql,
+  EDatabaseDialect.yellowbrick,
 ])
 
 export interface DatabaseConnection {

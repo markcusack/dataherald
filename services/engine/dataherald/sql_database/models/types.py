@@ -88,6 +88,7 @@ class SupportedDialects(Enum):
     BIGQUERY = "bigquery"
     SQLITE = "sqlite"
     REDSHIFT = "redshift"
+    YELLOWBRICK = "yellowbrick"
 
 
 class DatabaseConnection(BaseModel):

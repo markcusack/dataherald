@@ -18,6 +18,7 @@ class DatabaseDialects(str, Enum):
     BIGQUERY = "bigquery"
     SQLITE = "sqlite"
     REDSHIFT = "redshift"
+    YELLOWBRICK = "yellowbrick"
 
 
 class SSHSettings(BaseModel):

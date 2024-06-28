@@ -45,9 +45,10 @@ class DBConnections:
 
 
 class SQLDatabase:
-    def __init__(self, engine: Engine):
+    def __init__(self, engine: Engine, metadata: dict | None = None):
         """Create engine from database URI."""
         self._engine = engine
+        self._metadata = metadata
 
     @property
     def engine(self) -> Engine:
@@ -60,11 +61,15 @@ class SQLDatabase:
     ) -> "SQLDatabase":
         """Construct a SQLAlchemy engine from URI."""
         _engine_args = engine_args or {}
+        metadata = None
         if database_uri.lower().startswith("duckdb"):
             config = {"autoload_known_extensions": False}
             _engine_args["connect_args"] = {"config": config}
+        if database_uri.lower().startswith("yellowbrick"):
+            database_uri = database_uri.replace("yellowbrick", "postgresql", 1)
+            metadata = {"dialect": "yellowbrick"}
         engine = create_engine(database_uri, **_engine_args)
-        return cls(engine)
+        return cls(engine, metadata)
 
     @classmethod
     def get_sql_engine(
@@ -231,4 +236,7 @@ class SQLDatabase:
     @property
     def dialect(self) -> str:
         """Return string representation of dialect to use."""
-        return self._engine.dialect.name
+        d = self._engine.dialect.name
+        if self._metadata:
+            d = self._metadata.get("dialect", d)
+        return d

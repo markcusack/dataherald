@@ -74,7 +74,7 @@ class DatabaseConnectionService:
         elif dialect in ["databricks"]:
             pattern = r"&schema=[^&]*"
             return re.sub(pattern, "", connection_uri)
-        elif dialect in ["postgresql"]:
+        elif dialect in ["postgresql", "yellowbrick"]:
             pattern = r"\?options=-csearch_path" r"=[^&]*"
             return re.sub(pattern, "", connection_uri)
         return connection_uri
@@ -85,7 +85,7 @@ class DatabaseConnectionService:
             return f"{connection_uri}/{schema}"
         if dialect in ["databricks"]:
             return f"{connection_uri}&schema={schema}"
-        if dialect in ["postgresql"]:
+        if dialect in ["postgresql", "yellowbrick"]:
             return f"{connection_uri}?options=-csearch_path={schema}"
         return connection_uri
 

@@ -25,6 +25,7 @@ from dataherald.db_scanner.services.postgre_sql_scanner import PostgreSqlScanner
 from dataherald.db_scanner.services.redshift_scanner import RedshiftScanner
 from dataherald.db_scanner.services.snowflake_scanner import SnowflakeScanner
 from dataherald.db_scanner.services.sql_server_scanner import SqlServerScanner
+from dataherald.db_scanner.services.yellowbrick_scanner import YellowbrickScanner
 from dataherald.sql_database.base import SQLDatabase
 from dataherald.types import ScannerRequest
 
@@ -296,10 +297,11 @@ class SqlAlchemyScanner(Scanner):
             "mssql": SqlServerScanner,
             "clickhouse": ClickHouseScanner,
             "redshift": RedshiftScanner,
+            "yellowbrick": YellowbrickScanner,
         }
         scanner_service = BaseScanner()
-        if db_engine.engine.dialect.name in services.keys():
-            scanner_service = services[db_engine.engine.dialect.name]()
+        if db_engine.dialect in services.keys():
+            scanner_service = services[db_engine.dialect]()
 
         inspect(db_engine.engine)
         meta = MetaData(bind=db_engine.engine)

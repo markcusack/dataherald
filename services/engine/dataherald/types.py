@@ -76,7 +76,7 @@ class SupportedDatabase(Enum):
     SNOWFLAKE = "SNOWFLAKE"
     SQLSERVER = "SQLSERVER"
     BIGQUERY = "BIGQUERY"
-
+    YELLOWBRICK = "YELLOWBRICK"
 
 class ScannerRequest(BaseModel):
     ids: list[str] | None
