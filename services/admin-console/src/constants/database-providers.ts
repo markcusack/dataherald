@@ -57,16 +57,16 @@ const DATABASE_PROVIDERS: DatabaseProvider[] = [
     logoUrl: '/images/databases/mariadb.svg',
   },
   {
-    name: 'Yellowbrick',
-    driver: 'yellowbrick+psycopg2',
-    dialect: EDatabaseDialect.yellowbrick,
-    logoUrl: '/images/databases/yellowbrick.svg',
-  },
-  {
     name: 'ClickHouse',
     driver: 'clickhouse+http',
     dialect: EDatabaseDialect.clickhouse,
     logoUrl: '/images/databases/clickhouse.svg',
+  },
+  {
+    name: 'Yellowbrick',
+    driver: 'yellowbrick+psycopg2',
+    dialect: EDatabaseDialect.yellowbrick,
+    logoUrl: '/images/databases/yellowbrick.svg',
   },
 ]
 
