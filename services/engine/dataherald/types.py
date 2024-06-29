@@ -78,6 +78,7 @@ class SupportedDatabase(Enum):
     BIGQUERY = "BIGQUERY"
     YELLOWBRICK = "YELLOWBRICK"
 
+
 class ScannerRequest(BaseModel):
     ids: list[str] | None
     metadata: dict | None
