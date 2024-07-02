@@ -175,10 +175,11 @@ class Yellowbrick(VectorStore):
         self.embedding = {}
 
     def get_collection(
-        self, collection: str, db_connection_id: str = None
+        self, collection: str, db_connection_id: str
     ) -> YellowbrickDataherald:
-        if collection in self.yellowbrick:
-            return self.yellowbrick[collection]
+        key = db_connection_id + "_" + collection
+        if key in self.yellowbrick:
+            return self.yellowbrick[key]
 
         db_connection_repository = DatabaseConnectionRepository(
             self.system.instance(DB)
@@ -190,9 +191,10 @@ class Yellowbrick(VectorStore):
         _yellowbrick = YellowbrickDataherald(
             _embedding, self.connection_string, collection
         )
-        self.yellowbrick[collection] = _yellowbrick
+        self.yellowbrick[key] = _yellowbrick
         self.embedding[db_connection_id] = _embedding
-        return self.yellowbrick[collection]
+
+        return self.yellowbrick[key]
 
     @override
     def query(
