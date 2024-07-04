@@ -158,43 +158,34 @@ class YellowbrickDataherald(YellowbrickLC):
 
 
 class Yellowbrick(VectorStore):
-    connection_string: None
-    yellowbrick: dict[str, YellowbrickDataherald] = None
-    embedding: dict[str, OpenAIEmbeddings] = None
 
     def __init__(self, system: System):
         super().__init__(system)
 
+        self.yellowbrick = {}
         self.connection_string = os.environ.get("YELLOWBRICK_DB_CONNECTION_STRING")
         if self.connection_string is None:
             raise ValueError(
                 "YELLOWBRICK_DB_CONNECTION_STRING environment variable not set"
             )
 
-        self.yellowbrick = {}
-        self.embedding = {}
-
     def get_collection(
-        self, collection: str, db_connection_id: str
+        self, collection: str, db_connection_id: str = None
     ) -> YellowbrickDataherald:
-        key = db_connection_id + "_" + collection
-        if key in self.yellowbrick:
-            return self.yellowbrick[key]
+        if db_connection_id is not None and collection not in self.yellowbrick:
+            db_connection_repository = DatabaseConnectionRepository(
+                self.system.instance(DB)
+            )
+            database_connection = db_connection_repository.find_by_id(db_connection_id)
+            _embedding = OpenAIEmbeddings(
+                openai_api_key=database_connection.decrypt_api_key(), model=EMBEDDING_MODEL
+            )
+            _yellowbrick = YellowbrickDataherald(
+                _embedding, self.connection_string, collection
+            )
+            self.yellowbrick[collection] = _yellowbrick
 
-        db_connection_repository = DatabaseConnectionRepository(
-            self.system.instance(DB)
-        )
-        database_connection = db_connection_repository.find_by_id(db_connection_id)
-        _embedding = OpenAIEmbeddings(
-            openai_api_key=database_connection.decrypt_api_key(), model=EMBEDDING_MODEL
-        )
-        _yellowbrick = YellowbrickDataherald(
-            _embedding, self.connection_string, collection
-        )
-        self.yellowbrick[key] = _yellowbrick
-        self.embedding[db_connection_id] = _embedding
-
-        return self.yellowbrick[key]
+        return self.yellowbrick[collection]
 
     @override
     def query(
@@ -207,7 +198,7 @@ class Yellowbrick(VectorStore):
         target_collection = self.get_collection(collection, db_connection_id)
         results = []
         for query_text in query_texts:
-            xq = self.embedding[db_connection_id].embed_query(query_text)
+            xq = target_collection._embedding.embed_query(query_text)
             query_results = target_collection.similarity_search_with_score_by_vector(
                 xq, num_results
             )
