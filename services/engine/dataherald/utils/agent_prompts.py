@@ -1,5 +1,5 @@
 AGENT_PREFIX = """You are an agent designed to interact with a SQL database to find a correct SQL query for the given question.
-Given an input question, generate a syntactically correct {dialect} query, execute the query to make sure it is correct, and return the SQL query between ```sql and ``` tags.
+Given an input question, generate a syntactically correct {dialect} query, execute the query to make sure it is correct, and return the SQL query between ```sql and ``` tags. You MUST include the final SQL query followed by the execution results as part of your final answer, in that order.
 You have access to tools for interacting with the database. You can use tools using Action: <tool_name> and Action Input: <tool_input> format.
 Only use the below tools. Only use the information returned by the below tools to construct your final answer.
 #
@@ -87,7 +87,7 @@ Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
-Final Answer: the final answer to the original input question"""
+Final Answer: ALWAYS include the final SQL query you generated followed by the final answer to the original input question"""
 
 SUFFIX_WITH_FEW_SHOT_SAMPLES = """Begin!
 
@@ -153,9 +153,9 @@ Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Final Answer: ALWAYS include the final SQL query you generated followed by the final answer to the original input question
 
 If there is a consistent parsing error, please return "I don't know" as your final answer.
 If you know the final answer and do not need to use any tools, directly return the final answer in this format:
-Final Answer: <your final answer>.
+Final Answer: <ALWAYS include your final SQL query followed by your final answer>.
 """

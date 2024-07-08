@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Extra, confloat
+from pydantic import BaseModel, Extra, confloat, validator
 
 from utils.validation import ObjectIdString
 
@@ -90,8 +90,37 @@ class BaseSQLGeneration(BaseModel):
 
 
 class SQLGeneration(BaseSQLGeneration):
-    pass
 
+    class Config:
+        validate_assignment = True
+
+    @validator('status', pre=True)
+    def ensure_status_is_valid(cls, v):
+        if isinstance(v, list) and len(v) == 1:
+            v = v[0]
+        if isinstance(v, str):
+            return v
+        raise ValueError(f"Invalid status value: {v}")
+
+    @validator('sql', pre=True)
+    def ensure_sql_is_valid(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, list) and len(v) == 1:
+            v = v[0]
+        if isinstance(v, str):
+            return v
+        raise ValueError(f"Invalid sql value: {v}")
+
+    @validator('error', pre=True)
+    def ensure_error_is_valid(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, list) and len(v) == 1:
+            v = v[0]
+        if isinstance(v, str):
+            return v
+        raise ValueError(f"Invalid error value: {v}")
 
 class DHNLGenerationMetadata(BaseModel):
     organization_id: ObjectIdString | None
