@@ -76,7 +76,7 @@ class YellowbrickDataherald(YellowbrickLC):
 
             return self._connection
 
-    #@override -- commented out to avoid ruff rule conflict with parent function
+    # @override -- commented out to avoid ruff rule conflict with parent function
     def delete(
         self,
         ids: List[str] | None = None,
@@ -178,7 +178,8 @@ class Yellowbrick(VectorStore):
             )
             database_connection = db_connection_repository.find_by_id(db_connection_id)
             _embedding = OpenAIEmbeddings(
-                openai_api_key=database_connection.decrypt_api_key(), model=EMBEDDING_MODEL
+                openai_api_key=database_connection.decrypt_api_key(),
+                model=EMBEDDING_MODEL,
             )
             _yellowbrick = YellowbrickDataherald(
                 _embedding, self.connection_string, collection
