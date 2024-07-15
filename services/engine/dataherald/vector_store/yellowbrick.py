@@ -13,6 +13,7 @@ from dataherald.config import System
 from dataherald.db import DB
 from dataherald.repositories.database_connections import DatabaseConnectionRepository
 from dataherald.types import GoldenSQL
+from dataherald.utils.encrypt import FernetEncrypt
 from dataherald.vector_store import VectorStore
 
 if TYPE_CHECKING:
@@ -172,21 +173,29 @@ class Yellowbrick(VectorStore):
     def get_collection(
         self, collection: str, db_connection_id: str = None
     ) -> YellowbrickDataherald:
+        from psycopg2.extensions import parse_dsn
+
         if db_connection_id is not None and collection not in self.yellowbrick:
             db_connection_repository = DatabaseConnectionRepository(
                 self.system.instance(DB)
             )
             database_connection = db_connection_repository.find_by_id(db_connection_id)
+
+            fernet_encrypt = FernetEncrypt()
+            uri = fernet_encrypt.decrypt(database_connection.connection_uri)
+            pg_uri = uri.replace("yellowbrick+psycopg2", "postgresql")
+            dbname = parse_dsn(pg_uri).get("dbname")
+
             _embedding = OpenAIEmbeddings(
                 openai_api_key=database_connection.decrypt_api_key(),
                 model=EMBEDDING_MODEL,
             )
             _yellowbrick = YellowbrickDataherald(
-                _embedding, self.connection_string, collection
+                _embedding, self.connection_string, collection + "_" + dbname
             )
-            self.yellowbrick[collection] = _yellowbrick
+            self.yellowbrick[collection + "_" + dbname] = _yellowbrick
 
-        return self.yellowbrick[collection]
+        return self.yellowbrick[collection + "_" + dbname]
 
     @override
     def query(
