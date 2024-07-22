@@ -66,7 +66,9 @@ class YellowbrickDataherald(YellowbrickLC):
         self.CONTENT_TABLE: str = "_content"
 
         self.connection_string = connection_string
-        self.connection = YellowbrickDataherald.DatabaseConnection(connection_string, self.logger)
+        self.connection = YellowbrickDataherald.DatabaseConnection(
+            connection_string, self.logger
+        )
         atexit.register(self.connection.close_connection)
 
         self._schema = schema
