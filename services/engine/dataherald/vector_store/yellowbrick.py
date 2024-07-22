@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, List, Tuple
 
 from langchain_community.docstore.document import Document
 from langchain_community.vectorstores.yellowbrick import Yellowbrick as YellowbrickLC
+from langchain_core.embeddings import Embeddings
 from langchain_openai import OpenAIEmbeddings
 from overrides import override
 from sql_metadata import Parser
@@ -41,13 +42,51 @@ class YellowbrickDataherald(YellowbrickLC):
         logger: logging.Logger | None = None,
         drop: bool = False,
     ) -> None:
-        super().__init__(
-            embedding, connection_string, table, schema=schema, logger=logger, drop=drop
-        )
-        self.connection = YellowbrickDataherald.DatabaseConnection(
-            connection_string, self.logger
-        )
+        from psycopg2 import extras
+
+        extras.register_uuid()
+
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.ERROR)
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+
+        if not isinstance(embedding, Embeddings):
+            self.logger.error("embeddings input must be Embeddings object.")
+            return
+
+        self.LSH_INDEX_TABLE: str = "_lsh_index"
+        self.LSH_HYPERPLANE_TABLE: str = "_lsh_hyperplane"
+        self.CONTENT_TABLE: str = "_content"
+
+        self.connection_string = connection_string
+        self.connection = YellowbrickDataherald.DatabaseConnection(connection_string, self.logger)
         atexit.register(self.connection.close_connection)
+
+        self._schema = schema
+        self._table = table
+        self._embedding = embedding
+        self._max_embedding_len = None
+        self._check_database_utf8()
+
+        with self.connection.get_cursor() as cursor:
+            if drop:
+                self.drop(table=self._table, schema=self._schema, cursor=cursor)
+                self.drop(
+                    table=self._table + self.CONTENT_TABLE,
+                    schema=self._schema,
+                    cursor=cursor,
+                )
+                self._drop_lsh_index_tables(cursor)
+
+            self._create_schema(cursor)
+            self._create_table(cursor)
 
     class DatabaseConnection(YellowbrickLC.DatabaseConnection):
         _instance = None
