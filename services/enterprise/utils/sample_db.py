@@ -14,7 +14,7 @@ from config import (
     TABLE_DESCRIPTION_COL,
     settings,
 )
-from database.mongo import MongoDB
+from database.yellowbrick import Yellowbrick
 from exceptions.error_codes import BaseErrorCode, ErrorCodeData
 from exceptions.exception_handlers import raise_engine_exception
 from exceptions.exceptions import BaseError
@@ -85,11 +85,11 @@ class SampleDBDict(BaseModel):
 
 class SampleDB:
     def get_sample_dbs(self) -> list[SampleDBObject]:
-        cursor = MongoDB.find(SAMPLE_DATABASE_COL, {})
+        cursor = Yellowbrick.find(SAMPLE_DATABASE_COL, {})
         return [SampleDBObject(id=str(db["_id"]), **db) for db in cursor]
 
     def get_sample_db(self, sample_db_id: str) -> SampleDBObject:
-        sample_db = MongoDB.find_one(
+        sample_db = Yellowbrick.find_one(
             SAMPLE_DATABASE_COL,
             {"_id": ObjectId(sample_db_id)},
         )
@@ -111,7 +111,7 @@ class SampleDB:
         database_connection.metadata = engine_metadata
 
         new_db_id = str(
-            MongoDB.insert_one(
+            Yellowbrick.insert_one(
                 DATABASE_CONNECTION_COL, database_connection.dict(exclude={"id"})
             )
         )
@@ -136,7 +136,7 @@ class SampleDB:
         table_description_ids = (
             [
                 str(i)
-                for i in MongoDB.insert_many(TABLE_DESCRIPTION_COL, table_descriptions)
+                for i in Yellowbrick.insert_many(TABLE_DESCRIPTION_COL, table_descriptions)
             ]
             if table_descriptions
             else []
@@ -159,7 +159,7 @@ class SampleDB:
         ]
 
         instruction_ids = (
-            [str(i) for i in MongoDB.insert_many(INSTRUCTION_COL, instructions)]
+            [str(i) for i in Yellowbrick.insert_many(INSTRUCTION_COL, instructions)]
             if instructions
             else []
         )
@@ -181,7 +181,7 @@ class SampleDB:
         ]
 
         finetuning_ids = (
-            [str(i) for i in MongoDB.insert_many(FINETUNING_COL, finetunings)]
+            [str(i) for i in Yellowbrick.insert_many(FINETUNING_COL, finetunings)]
             if finetunings
             else []
         )

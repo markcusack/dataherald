@@ -25,6 +25,8 @@ class AuthService:
         else:
             user_org_id = user.organization_id
 
+        print(f"AUTH SERVICE GOT USER {user} {user_org_id}")
+    
         # update user data from the login request cause it could have updates
         # TODO - when we add user data customization, we should stop doing this
         session_user = self.user_service.update_user(
@@ -37,6 +39,7 @@ class AuthService:
             ),
         )
 
+        print(f"Get org for {session_user}")
         organization = (
             self.org_service.get_organization(str(session_user.organization_id))
             if session_user.organization_id

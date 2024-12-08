@@ -9,7 +9,7 @@ from config import (
     USER_COL,
     auth_settings,
 )
-from database.mongo import MongoDB
+from database.yellowbrick import Yellowbrick
 from exceptions.exceptions import UnknownError
 from modules.auth.models.exceptions import (
     BearerTokenExpiredError,
@@ -87,7 +87,7 @@ class Authorize:
         return user
 
     def user_in_organization(self, user_id: str, org_id: str):
-        if not MongoDB.find_one(
+        if not Yellowbrick.find_one(
             USER_COL,
             {"_id": ObjectId(user_id), "organization_id": org_id},
         ):

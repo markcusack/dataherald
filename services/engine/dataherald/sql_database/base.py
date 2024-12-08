@@ -68,7 +68,6 @@ class SQLDatabase:
         if database_uri.lower().startswith("yellowbrick"):
             database_uri = database_uri.replace("yellowbrick", "postgresql", 1)
             metadata = {"dialect": "yellowbrick"}
-            _engine_args["pool_pre_ping"] = True
         engine = create_engine(database_uri, **_engine_args)
         return cls(engine, metadata)
 

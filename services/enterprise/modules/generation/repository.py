@@ -7,7 +7,7 @@ from config import (
     PROMPT_COL,
     SQL_GENERATION_COL,
 )
-from database.mongo import ASCENDING, DESCENDING, MongoDB
+from database.yellowbrick import Yellowbrick
 from modules.generation.models.entities import (
     DHPromptMetadata,
     NLGeneration,
@@ -20,7 +20,7 @@ from utils.misc import get_next_display_id
 
 class GenerationRepository:
     def get_prompt(self, prompt_id: str, org_id: str) -> Prompt:
-        prompt = MongoDB.find_one(
+        prompt = Yellowbrick.find_one(
             PROMPT_COL,
             {
                 "_id": ObjectId(prompt_id),
@@ -61,7 +61,7 @@ class GenerationRepository:
     def get_sql_generation(
         self, sql_generation_id: str, org_id: str = None
     ) -> SQLGeneration:
-        sql_generation = MongoDB.find_one(
+        sql_generation = Yellowbrick.find_one(
             SQL_GENERATION_COL,
             {
                 "_id": ObjectId(sql_generation_id),
@@ -114,7 +114,7 @@ class GenerationRepository:
         ]
 
     def get_nl_generation(self, nl_generation_id: str, org_id: str) -> NLGeneration:
-        nl_generation = MongoDB.find_one(
+        nl_generation = Yellowbrick.find_one(
             NL_GENERATION_COL,
             {
                 "_id": ObjectId(nl_generation_id),
@@ -173,110 +173,7 @@ class GenerationRepository:
         search_term: str = "",
         db_connection_id: str = None,
     ) -> list[PromptAggregation]:
-        search_term = re.escape(search_term)
-        match = [
-            {
-                "$match": {
-                    "metadata.dh_internal.organization_id": org_id,
-                }
-            }
-        ]
-        lookups = [
-            {
-                "$lookup": {
-                    "from": "sql_generations",
-                    "let": {"promptId": {"$toString": "$_id"}},
-                    "pipeline": [
-                        {
-                            "$match": {
-                                "$expr": {"$eq": ["$prompt_id", "$$promptId"]},
-                            }
-                        },
-                        {"$sort": {"created_at": -1}},
-                        {"$limit": 1},
-                        {
-                            "$lookup": {
-                                "from": "nl_generations",
-                                "let": {"sqlGenId": {"$toString": "$_id"}},
-                                "pipeline": [
-                                    {
-                                        "$match": {
-                                            "$expr": {
-                                                "$eq": [
-                                                    "$sql_generation_id",
-                                                    "$$sqlGenId",
-                                                ]
-                                            }
-                                        }
-                                    },
-                                    {"$sort": {"created_at": -1}},
-                                    {"$limit": 1},
-                                ],
-                                "as": "nl_generation",
-                            }
-                        },
-                    ],
-                    "as": "sql_generation",
-                }
-            }
-        ]
-        unwinds = [
-            {
-                "$unwind": {
-                    "path": "$sql_generation",
-                    "preserveNullAndEmptyArrays": True,  # Keep prompts even if no matching sql_generations
-                }
-            },
-            {
-                "$unwind": {
-                    "path": "$sql_generation.nl_generation",
-                    "preserveNullAndEmptyArrays": True,  # Keep sql_generations even if no matching nl_generations
-                }
-            },
-        ]
-        search = [
-            {
-                "$match": {
-                    "$or": [
-                        {
-                            "text": {"$regex": search_term, "$options": "i"}
-                        },  # Search term in prompts.text
-                        {
-                            "sql_generation.sql": {
-                                "$regex": search_term,
-                                "$options": "i",
-                            }
-                        },  # Or in sql_generations.sql
-                    ]
-                }
-            }
-        ]
-        pagination = [
-            {"$sort": {order: ASCENDING if ascend else DESCENDING}},
-            {"$skip": skip},
-            {"$limit": limit},
-        ]
-        if search_term != "":
-            pipeline = [
-                *match,
-                *lookups,
-                *unwinds,
-                *search,
-                *pagination,
-            ]
-        else:
-            pipeline = [
-                *match,
-                *pagination,
-                *lookups,
-                *unwinds,
-                *search,
-            ]
-
-        if db_connection_id:
-            pipeline[0]["$match"]["db_connection_id"] = db_connection_id
-
-        cursor = MongoDB.aggregate(PROMPT_COL, pipeline)
+        cursor = Yellowbrick.get_generation_aggregations(skip, limit, order, ascend, org_id, search_term, db_connection_id)
         return [PromptAggregation(**c, id=str(c["_id"])) for c in cursor]
 
     def get_next_display_id(self, org_id: str) -> str:
@@ -289,7 +186,7 @@ class GenerationRepository:
         for key, value in metadata.dict(exclude_unset=True).items():
             new_key = "metadata.dh_internal." + key
             new_metadata[new_key] = value
-        return MongoDB.update_one(
+        return Yellowbrick.update_one(
             PROMPT_COL,
             {"_id": ObjectId(prompt_id)},
             new_metadata,
@@ -304,12 +201,9 @@ class GenerationRepository:
         order: str,
         ascend: bool,
     ):
-        return (
-            MongoDB.find(item_col, query)
-            .sort([(order, ASCENDING if ascend else DESCENDING)])
-            .skip(skip)
-            .limit(limit)
-        )
+        items = Yellowbrick.find(item_col, query)
+        items.sort(key=lambda x: x.get(order), reverse=not ascend)
+        return items[skip : skip + limit]
 
     def _get_latest_item(self, item_col: str, query: dict):
-        return MongoDB.find_one(item_col, query, sort=[("created_at", DESCENDING)])
+        return Yellowbrick.find_one(item_col, query, sort=[("created_at", 1)])

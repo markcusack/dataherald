@@ -216,7 +216,7 @@ class Yellowbrick(VectorStore):
     ) -> YellowbrickDataherald:
         from psycopg2.extensions import parse_dsn
 
-        if db_connection_id is not None and collection not in self.yellowbrick:
+        if db_connection_id is not None:
             db_connection_repository = DatabaseConnectionRepository(
                 self.system.instance(DB)
             )
@@ -227,16 +227,19 @@ class Yellowbrick(VectorStore):
             pg_uri = uri.replace("yellowbrick+psycopg2", "postgresql")
             dbname = parse_dsn(pg_uri).get("dbname")
 
-            _embedding = OpenAIEmbeddings(
-                openai_api_key=database_connection.decrypt_api_key(),
-                model=EMBEDDING_MODEL,
-            )
-            _yellowbrick = YellowbrickDataherald(
-                _embedding, self.connection_string, collection + "_" + dbname
-            )
-            self.yellowbrick[collection + "_" + dbname] = _yellowbrick
-
-        return self.yellowbrick[collection + "_" + dbname]
+            named_collection = collection + "_" + dbname
+            if named_collection not in self.yellowbrick:
+                _embedding = OpenAIEmbeddings(
+                    openai_api_key=database_connection.decrypt_api_key(),
+                    model=EMBEDDING_MODEL,
+                )
+                _yellowbrick = YellowbrickDataherald(
+                    _embedding, self.connection_string, named_collection
+                )
+                self.yellowbrick[named_collection] = _yellowbrick
+            return self.yellowbrick[named_collection]
+        
+        return None
 
     @override
     def query(
@@ -246,16 +249,17 @@ class Yellowbrick(VectorStore):
         collection: str,
         num_results: int,
     ) -> list:
-        target_collection = self.get_collection(collection, db_connection_id)
         results = []
-        for query_text in query_texts:
-            xq = target_collection._embedding.embed_query(query_text)
-            query_results = target_collection.similarity_search_with_score_by_vector(
-                xq, num_results
-            )
-            results.extend(
-                self.convert_and_filter_results(query_results, db_connection_id)
-            )
+        target_collection = self.get_collection(collection, db_connection_id)
+        if target_collection:
+            for query_text in query_texts:
+                xq = target_collection._embedding.embed_query(query_text)
+                query_results = target_collection.similarity_search_with_score_by_vector(
+                    xq, num_results
+                )
+                results.extend(
+                    self.convert_and_filter_results(query_results, db_connection_id)
+                )
 
         return results
 
@@ -292,18 +296,22 @@ class Yellowbrick(VectorStore):
             metadata = [{}]
         metadata[0].update({"dataherald_id": ids[0]})
 
-        self.get_collection(collection, db_connection_id).add_texts(
-            [documents], metadata
-        )
+        target_collection = self.get_collection(collection, db_connection_id)
+        if target_collection:
+            target_collection.add_texts([documents], metadata)
 
     @override
     def delete_record(self, collection: str, id: str):
         filter_expr = f"dataherald_id = '{id}'"
-        self.get_collection(collection).delete(filter_expr=filter_expr)
+        target_collection = self.get_collection(collection)
+        if target_collection:
+            target_collection.delete(filter_expr=filter_expr)
 
     @override
     def delete_collection(self, collection: str):
-        self.get_collection(collection).delete(delete_all=True)
+        target_collection = self.get_collection(collection)
+        if target_collection:
+            target_collection.delete(delete_all=True)
 
     @override
     def create_collection(self, collection: str):

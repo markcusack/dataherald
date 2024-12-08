@@ -1,13 +1,13 @@
 from bson import ObjectId
 
 from config import DATABASE_CONNECTION_COL
-from database.mongo import MongoDB
+from database.yellowbrick import Yellowbrick
 from modules.db_connection.models.entities import DBConnection
 
 
 class DBConnectionRepository:
     def get_db_connections(self, org_id: str) -> list[DBConnection]:
-        db_connections = MongoDB.find(
+        db_connections = Yellowbrick.find(
             DATABASE_CONNECTION_COL,
             {"metadata.dh_internal.organization_id": org_id},
         )
@@ -17,7 +17,7 @@ class DBConnectionRepository:
         ]
 
     def get_db_connection(self, db_connection_id: str, org_id: str) -> DBConnection:
-        db_connection = MongoDB.find_one(
+        db_connection = Yellowbrick.find_one(
             DATABASE_CONNECTION_COL,
             {
                 "_id": ObjectId(db_connection_id),
@@ -31,7 +31,7 @@ class DBConnectionRepository:
         )
 
     def get_db_connection_by_alias(self, alias: str, org_id: str) -> DBConnection:
-        db_connection = MongoDB.find_one(
+        db_connection = Yellowbrick.find_one(
             DATABASE_CONNECTION_COL,
             {
                 "alias": alias,

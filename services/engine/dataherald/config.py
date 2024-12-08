@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     eval_impl: str = os.environ.get(
         "EVALUATOR", "dataherald.eval.simple_evaluator.SimpleEvaluator"
     )
-    db_impl: str = os.environ.get("DB", "dataherald.db.mongo.MongoDB")
+    db_impl: str = os.environ.get("DB", "dataherald.db.yellowbrick.Yellowbrick")
 
     context_store_impl: str = os.environ.get(
         "CONTEXT_STORE", "dataherald.context_store.default.DefaultContextStore"
@@ -39,8 +39,7 @@ class Settings(BaseSettings):
         "VECTOR_STORE", "dataherald.vector_store.chroma.Chroma"
     )
 
-    db_name: str | None = os.environ.get("MONGODB_DB_NAME")
-    db_uri: str | None = os.environ.get("MONGODB_URI")
+    db_uri: str | None = os.environ.get("YELLOWBRICK_DB_CONNECTION_STRING")
     openai_api_key: str | None = os.environ.get("OPENAI_API_KEY")
     encrypt_key: str = os.environ.get("ENCRYPT_KEY")
     s3_custom_endpoint: str | None = os.environ.get("S3_CUSTOM_ENDPOINT")

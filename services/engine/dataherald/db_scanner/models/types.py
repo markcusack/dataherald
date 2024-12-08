@@ -43,7 +43,7 @@ class TableDescription(BaseModel):
     metadata: dict | None
     created_at: datetime = Field(default_factory=datetime.now)
 
-    @validator("last_schema_sync", pre=True)
+    @validator("last_schema_sync")
     def parse_datetime_with_timezone(cls, value):
         if not value:
             return None

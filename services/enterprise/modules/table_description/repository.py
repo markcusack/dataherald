@@ -1,7 +1,7 @@
 from bson import ObjectId
 
 from config import TABLE_DESCRIPTION_COL
-from database.mongo import MongoDB
+from database.yellowbrick import Yellowbrick
 from modules.table_description.models.entities import TableDescription
 
 
@@ -15,7 +15,7 @@ class TableDescriptionRepository:
         }
         if table_name:
             query["table_name"] = table_name
-        table_descriptions = MongoDB.find(
+        table_descriptions = Yellowbrick.find(
             TABLE_DESCRIPTION_COL,
             query,
         )
@@ -28,7 +28,7 @@ class TableDescriptionRepository:
     def get_table_description(
         self, table_description_id: str, org_id: str
     ) -> TableDescription:
-        table_description = MongoDB.find_one(
+        table_description = Yellowbrick.find_one(
             TABLE_DESCRIPTION_COL,
             {
                 "_id": ObjectId(table_description_id),
@@ -57,4 +57,5 @@ class TableDescriptionRepository:
             },
         ]
 
-        return list(MongoDB.aggregate(TABLE_DESCRIPTION_COL, pipeline))
+        return Yellowbrick.get_table_description_grouped_by_db_connection_id(tables_description_ids)
+        #return list(Yellowbrick.aggregate(TABLE_DESCRIPTION_COL, pipeline))

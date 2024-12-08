@@ -1,4 +1,4 @@
-from database.mongo import DESCENDING, MongoDB
+from database.yellowbrick import Yellowbrick
 from exceptions.exceptions import ReservedMetadataKeyError
 
 MAX_DISPLAY_ID = 99999
@@ -6,13 +6,13 @@ RESERVED_KEY = "dh_internal"
 
 
 def get_next_display_id(collection, org_id: str, prefix: str) -> str:
-    latest_item = MongoDB.find_one(
+    latest_item = Yellowbrick.find_one(
         collection,
         {
             "metadata.dh_internal.organization_id": org_id,
             "metadata.dh_internal.display_id": {"$exists": True},
         },
-        sort=[("metadata.dh_internal.display_id", DESCENDING)],
+        sort=[("metadata.dh_internal.display_id", 1)],
     )
     if latest_item:
         last_display_id: str = latest_item["metadata"]["dh_internal"]["display_id"]

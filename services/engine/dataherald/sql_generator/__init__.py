@@ -1,9 +1,9 @@
 """Base class that all sql generation classes inherit from."""
 
 import datetime
-import logging
 import os
 import re
+import time
 from abc import ABC, abstractmethod
 from queue import Queue
 from typing import Any, Dict, List, Tuple
@@ -189,57 +189,73 @@ class SQLGenerator(Component, ABC):
         queue: Queue,
         metadata: dict = None,
     ):  # noqa: PLR0912
-        try:
-            with get_openai_callback() as cb:
-                for chunk in agent_executor.stream(
-                    {"input": question}, {"metadata": metadata}
-                ):
-                    if "actions" in chunk:
-                        for message in chunk["messages"]:
-                            queue.put(
-                                self.format_sql_query_intermediate_steps(
-                                    message.content
+        MAX_RETRIES = 10
+        RETRY_DELAY = 4
+        attempt = 0
+        success = False
+        cb = None
+        # GPT-4o occasionally responds with "The model produced invalid content". Retry on failure
+        while attempt < MAX_RETRIES and not success:
+            try:
+                with get_openai_callback() as cb:
+                    for chunk in agent_executor.stream(
+                        {"input": question}, {"metadata": metadata}
+                    ):
+                        if "actions" in chunk:
+                            for message in chunk["messages"]:
+                                queue.put(
+                                    self.format_sql_query_intermediate_steps(
+                                        message.content
+                                    )
+                                    + "\n"
                                 )
-                                + "\n"
-                            )
-                    elif "steps" in chunk:
-                        for step in chunk["steps"]:
+                        elif "steps" in chunk:
+                            for step in chunk["steps"]:
+                                queue.put(
+                                    f"\n**Observation:**\n {self.format_sql_query_intermediate_steps(step.observation)}\n"
+                                )
+                        elif "output" in chunk:
                             queue.put(
-                                f"\n**Observation:**\n {self.format_sql_query_intermediate_steps(step.observation)}\n"
+                                f'\n**Final Answer:**\n {self.format_sql_query_intermediate_steps(chunk["output"])}'
                             )
-                    elif "output" in chunk:
-                        queue.put(
-                            f'\n**Final Answer:**\n {self.format_sql_query_intermediate_steps(chunk["output"])}'
-                        )
-                        if "```sql" in chunk["output"]:
-                            response.sql = replace_unprocessable_characters(
-                                self.remove_markdown(chunk["output"])
-                            )
-                    else:
-                        raise ValueError()
-        except SQLInjectionError as e:
-            raise SQLInjectionError(e) from e
-        except EngineTimeOutORItemLimitError as e:
-            raise EngineTimeOutORItemLimitError(e) from e
-        except Exception as e:
-            response.sql = ("",)
-            response.status = ("INVALID",)
-            response.error = (str(e),)
-        finally:
-            queue.put(None)
-            response.tokens_used = cb.total_tokens
-            response.completed_at = datetime.datetime.now()
-            if not response.error:
-                if response.sql:
-                    response = self.create_sql_query_status(
-                        self.database,
-                        response.sql,
-                        response,
-                    )
+                            if "```sql" in chunk["output"]:
+                                response.sql = replace_unprocessable_characters(
+                                    self.remove_markdown(chunk["output"])
+                                )
+                        else:
+                            raise ValueError()    
+                success = True
+            except SQLInjectionError as e:
+               raise SQLInjectionError(e) from e
+            except EngineTimeOutORItemLimitError as e:
+               raise EngineTimeOutORItemLimitError(e) from e
+            except Exception as e:
+                attempt += 1
+                if attempt < MAX_RETRIES:
+                    print(f"Retrying in {RETRY_DELAY} seconds... (Attempt {attempt + 1}/{MAX_RETRIES})")
+                    time.sleep(RETRY_DELAY)
                 else:
-                    response.status = "INVALID"
-                    response.error = "No SQL query generated"
-            sql_generation_repository.update(response)
+                    response.sql = ("",)
+                    response.status = ("INVALID",)
+                    response.error = (str(e),)
+                    print("Max retries reached. Exiting.")
+            finally:
+                if success or attempt >= MAX_RETRIES:
+                    if cb is not None:
+                        response.tokens_used = cb.total_tokens
+                    queue.put(None)
+                    response.completed_at = datetime.datetime.now()
+                    if not response.error:
+                        if response.sql:
+                            response = self.create_sql_query_status(
+                                self.database,
+                                response.sql,
+                                response,
+                            )
+                        else:
+                            response.status = "INVALID"
+                            response.error = "No SQL query generated"
+                    sql_generation_repository.update(response)
 
     @abstractmethod
     def stream_response(
