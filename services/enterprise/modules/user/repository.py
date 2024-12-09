@@ -11,7 +11,6 @@ class UserRepository:
 
     def get_user(self, query: dict) -> User:
         user = Yellowbrick.find_one(USER_COL, query)
-        print(f"user repo: {user}")
         return User(id=str(user["_id"]), **user) if user else None
 
     def get_user_by_sub(self, sub: str) -> User:

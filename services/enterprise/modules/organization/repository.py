@@ -13,7 +13,6 @@ class OrganizationRepository:
         ]
 
     def get_organization(self, org_id: str) -> Organization:
-        print(f"org service repo: get_organization {org_id}")
         organization = Yellowbrick.find_by_id(ORGANIZATION_COL, org_id)
         return (
             Organization(id=str(organization["_id"]), **organization)

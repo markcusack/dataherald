@@ -51,10 +51,17 @@ class Yellowbrick:
 
             if query:
                 for key, value in query.items():
-                    param_name = f"param_{key.replace('.', '_')}"
-                    condition = text(f"data:{key} = :{param_name}")
-                    formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
-                    stmt = stmt.where(condition.bindparams(**{param_name: formatted_value}))
+                    if isinstance(value, dict) and "$exists" in value:
+                        if value["$exists"]:
+                            condition = text(f"JSON_TYPEOF(data:{key} null on error) IS NOT NULL")
+                        else:
+                            condition = text(f"JSON_TYPEOF(data:{key} null on error) IS NULL")
+                        stmt = stmt.where(condition)
+                    else:
+                        param_name = f"param_{key.replace('.', '_')}"
+                        condition = text(f"data:{key} = :{param_name}")
+                        formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
+                        stmt = stmt.where(condition.bindparams(**{param_name: formatted_value}))
 
             if sort:
                 for column, order in sort:
