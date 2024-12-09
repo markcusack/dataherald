@@ -143,7 +143,7 @@ class YellowbrickDataherald(YellowbrickLC):
                 """
                 WHERE doc_id in (
                     SELECT doc_id FROM {table_identifier} WHERE
-                    json_lookup(metadata, '/{key}', 'jpointer_simdjson') = {value}
+                    json_extract(metadata::JSON, '$.{key}') = {value}
                 )
             """
             ).format(
@@ -285,7 +285,7 @@ class Yellowbrick(VectorStore):
 
     @override
     def delete_record(self, collection: str, db_connection_id: str, id: str):
-        filter_expr = f"dataherald_id = '{id}'"
+        filter_expr = f'dataherald_id = \'"{id}"\''
         target_collection = self.get_collection(collection, db_connection_id)
         if target_collection:
             target_collection.delete(filter_expr=filter_expr)
