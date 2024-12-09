@@ -14,7 +14,6 @@ from dataherald.config import System
 from dataherald.db import DB
 from dataherald.repositories.database_connections import DatabaseConnectionRepository
 from dataherald.types import GoldenSQL
-from dataherald.utils.encrypt import FernetEncrypt
 from dataherald.vector_store import VectorStore
 
 if TYPE_CHECKING:
@@ -112,7 +111,7 @@ class YellowbrickDataherald(YellowbrickLC):
                     cursor.execute("SELECT 1")
                     cursor.close()
             except (Exception, psycopg2.DatabaseError) as error:
-                print(f"Error detected, reconnecting: {error}")
+                self._logger.error(f"Error detected, reconnecting: {error}")
                 self._connection = psycopg2.connect(self._connection_string)
                 self._connection.autocommit = False
 
@@ -173,6 +172,11 @@ class YellowbrickDataherald(YellowbrickLC):
 
         schema_prefix = (self._schema,) if self._schema else ()
         with self.connection.get_cursor() as cursor:
+            table_identifier = sql.Identifier(*schema_prefix, self._table)
+            query = sql.SQL("DELETE FROM {table} {where_sql}").format(
+                table=table_identifier, where_sql=where_sql
+            )
+            cursor.execute(query)
             table_identifier = sql.Identifier(
                 *schema_prefix, self._table + self.CONTENT_TABLE
             )
@@ -180,13 +184,6 @@ class YellowbrickDataherald(YellowbrickLC):
                 table=table_identifier, where_sql=where_sql
             )
             cursor.execute(query)
-
-            table_identifier = sql.Identifier(*schema_prefix, self._table)
-            query = sql.SQL("DELETE FROM {table} {where_sql}").format(
-                table=table_identifier, where_sql=where_sql
-            )
-            cursor.execute(query)
-
             if self._table_exists(
                 cursor, self._table + self.LSH_INDEX_TABLE, *schema_prefix
             ):
@@ -212,34 +209,22 @@ class Yellowbrick(VectorStore):
             )
 
     def get_collection(
-        self, collection: str, db_connection_id: str = None
+        self, collection: str, db_connection_id: str
     ) -> YellowbrickDataherald:
-        from psycopg2.extensions import parse_dsn
-
-        if db_connection_id is not None:
+        if collection not in self.yellowbrick:
             db_connection_repository = DatabaseConnectionRepository(
                 self.system.instance(DB)
             )
             database_connection = db_connection_repository.find_by_id(db_connection_id)
-
-            fernet_encrypt = FernetEncrypt()
-            uri = fernet_encrypt.decrypt(database_connection.connection_uri)
-            pg_uri = uri.replace("yellowbrick+psycopg2", "postgresql")
-            dbname = parse_dsn(pg_uri).get("dbname")
-
-            named_collection = collection + "_" + dbname
-            if named_collection not in self.yellowbrick:
-                _embedding = OpenAIEmbeddings(
-                    openai_api_key=database_connection.decrypt_api_key(),
-                    model=EMBEDDING_MODEL,
-                )
-                _yellowbrick = YellowbrickDataherald(
-                    _embedding, self.connection_string, named_collection
-                )
-                self.yellowbrick[named_collection] = _yellowbrick
-            return self.yellowbrick[named_collection]
-        
-        return None
+            _embedding = OpenAIEmbeddings(
+                openai_api_key=database_connection.decrypt_api_key(),
+                model=EMBEDDING_MODEL,
+            )
+            _yellowbrick = YellowbrickDataherald(
+                _embedding, self.connection_string, collection
+            )
+            self.yellowbrick[collection] = _yellowbrick
+        return self.yellowbrick[collection]
 
     @override
     def query(
@@ -264,8 +249,8 @@ class Yellowbrick(VectorStore):
         return results
 
     @override
-    def add_records(self, golden_sqls: List[GoldenSQL], collection: str):
-        for golden_sql in golden_sqls:
+    def add_records(self, golden_sqls: List[GoldenSQL], collections: List[str]):
+        for golden_sql, collection in zip(golden_sqls, collections):
             self.add_record(
                 golden_sql.prompt_text,
                 golden_sql.db_connection_id,
@@ -295,21 +280,19 @@ class Yellowbrick(VectorStore):
         if not metadata:
             metadata = [{}]
         metadata[0].update({"dataherald_id": ids[0]})
-
         target_collection = self.get_collection(collection, db_connection_id)
-        if target_collection:
-            target_collection.add_texts([documents], metadata)
+        target_collection.add_texts([documents], metadata)
 
     @override
-    def delete_record(self, collection: str, id: str):
+    def delete_record(self, collection: str, db_connection_id: str, id: str):
         filter_expr = f"dataherald_id = '{id}'"
-        target_collection = self.get_collection(collection)
+        target_collection = self.get_collection(collection, db_connection_id)
         if target_collection:
             target_collection.delete(filter_expr=filter_expr)
 
     @override
-    def delete_collection(self, collection: str):
-        target_collection = self.get_collection(collection)
+    def delete_collection(self, collection: str, db_connection_id: str):
+        target_collection = self.get_collection(collection, db_connection_id)
         if target_collection:
             target_collection.delete(delete_all=True)
 
