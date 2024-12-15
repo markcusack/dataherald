@@ -156,9 +156,10 @@ class SQLGenerator(Component, ABC):
                         observation=self.truncate_observations(step[1]),
                     )
                 )
-        formatted_intermediate_steps[0].thought = suffix.split("Thought: ")[1].split(
-            "{agent_scratchpad}"
-        )[0]
+        if formatted_intermediate_steps:
+            formatted_intermediate_steps[0].thought = suffix.split("Thought: ")[1].split(
+                "{agent_scratchpad}"
+            )[0]
         return formatted_intermediate_steps
 
     def truncate_observations(self, obervarion: str, max_length: int = 2000) -> str:
