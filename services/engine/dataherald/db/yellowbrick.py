@@ -38,7 +38,7 @@ class Yellowbrick(DB):
         inspector = inspect(self.engine)
         if not inspector.has_table(table_name):
             self.create_jsonb_table(table_name)
-        return Table(table_name, self.metadata, autoload_with=self.engine)
+        return Table(table_name, self.metadata, extend_existing=True, autoload_with=self.engine)
 
     def preprocess_json(self, data):
         if isinstance(data, dict):

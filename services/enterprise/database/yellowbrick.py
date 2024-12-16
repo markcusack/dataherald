@@ -41,7 +41,7 @@ class Yellowbrick:
         inspector = inspect(cls.engine)
         if not inspector.has_table(table_name):
             cls.create_jsonb_table(table_name)
-        return Table(table_name, cls.metadata, autoload_with=cls.engine)
+        return Table(table_name, cls.metadata, extend_existing=True, autoload_with=cls.engine)
 
     @classmethod
     def find_one(cls, table_name: str, query: dict, sort: list = None) -> dict:
