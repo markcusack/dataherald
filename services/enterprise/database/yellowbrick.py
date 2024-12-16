@@ -59,7 +59,7 @@ class Yellowbrick:
                         stmt = stmt.where(condition)
                     else:
                         param_name = f"param_{key.replace('.', '_')}"
-                        condition = text(f"data:{key} = :{param_name}")
+                        condition = text(f"data:{key} null on error = :{param_name}")
                         formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
                         stmt = stmt.where(condition.bindparams(**{param_name: formatted_value}))
 
@@ -146,7 +146,7 @@ class Yellowbrick:
                 conditions = []
                 for key, value in query.items():
                     param_name = f"param_{key.replace('.', '_')}"
-                    condition = text(f"data:{key} = :{param_name}")
+                    condition = text(f"data:{key} null on error = :{param_name}")
                     formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
                     conditions.append(condition.bindparams(**{param_name: formatted_value}))  
 
@@ -164,7 +164,7 @@ class Yellowbrick:
             conditions = []
             for key, value in filter.items():
                 formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
-                condition = text(f"data:{key} = :{key}").bindparams(**{key: formatted_value})
+                condition = text(f"data:{key} null on error = :{key}").bindparams(**{key: formatted_value})
                 conditions.append(condition)
 
             update_stmt = update(table).where(*conditions).values(**updated_obj)
@@ -217,7 +217,7 @@ class Yellowbrick:
             if query:
                 for key, value in query.items():
                     param_name = f"param_{key.replace('.', '_')}"
-                    condition = text(f"data:{key} = :{param_name}")
+                    condition = text(f"data:{key} null on error = :{param_name}")
                     formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
                     stmt = stmt.where(condition.bindparams(**{param_name: formatted_value}))
             results = session.execute(stmt).fetchall()
@@ -230,7 +230,7 @@ class Yellowbrick:
             conditions = []
             for key, value in query.items():
                 param_name = f"param_{key.replace('.', '_')}"
-                condition = text(f"data:{key} = :{param_name}")
+                condition = text(f"data:{key} null on error = :{param_name}")
                 formatted_value = value if isinstance(value, (int, float, bool)) else f'"{value}"'
                 conditions.append(condition.bindparams(**{param_name: formatted_value}))   
             result = session.execute(table.delete().where(*conditions))
