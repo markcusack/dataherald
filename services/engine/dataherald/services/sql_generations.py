@@ -92,7 +92,7 @@ class SQLGenerationService:
         db_connection_repository = DatabaseConnectionRepository(self.storage)
         db_connection = db_connection_repository.find_by_id(prompt.db_connection_id)
         database = SQLDatabase.get_sql_engine(db_connection, True)
-        if sql_generation_request.sql is not None:
+        if sql_generation_request.sql:
             sql_generation = SQLGeneration(
                 prompt_id=prompt_id,
                 sql=sql_generation_request.sql,
@@ -106,10 +106,7 @@ class SQLGenerationService:
                 self.update_error(initial_sql_generation, str(e))
                 raise SQLGenerationError(str(e), initial_sql_generation.id) from e
         else:
-            if (
-                sql_generation_request.finetuning_id is None
-                or sql_generation_request.finetuning_id == ""
-            ):
+            if not sql_generation_request.finetuning_id:
                 if sql_generation_request.low_latency_mode:
                     raise SQLGenerationError(
                         "Low latency mode is not supported for our old agent with no finetuning. Please specify a finetuning id.",
@@ -212,10 +209,7 @@ class SQLGenerationService:
             )
         db_connection_repository = DatabaseConnectionRepository(self.storage)
         db_connection = db_connection_repository.find_by_id(prompt.db_connection_id)
-        if (
-            sql_generation_request.finetuning_id is None
-            or sql_generation_request.finetuning_id == ""
-        ):
+        if not sql_generation_request.finetuning_id:
             if sql_generation_request.low_latency_mode:
                 raise SQLGenerationError(
                     "Low latency mode is not supported for our old agent with no finetuning. Please specify a finetuning id.",
